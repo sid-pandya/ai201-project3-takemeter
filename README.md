@@ -34,7 +34,7 @@ To capture the distinct tiers of discourse without relying on vague, subjective 
 ### `visceral_reaction` (Low-Information / Pure Emotion)
 
 - **Definition:** Non-analytical, immediate human reactions consisting of all-caps shock, keyboard mashing, hype, or superficial expressions of attachment.
-- **Example 1:** _"WHAT THE FUCK? JACE?!? Of course Vermax wouldn't make it but Jace too?? Such a stressful episode holy fuck. Still fking loved it though, bring me more!"_
+- **Example 1:** _"WHAT THE FUCK JACE??? holy fuck"_
 - **Example 2:** _"I am actually going to throw up because my heart is beating so fast watching these galleys sink into the water."_
 
 ---
@@ -43,9 +43,9 @@ To capture the distinct tiers of discourse without relying on vague, subjective 
 
 ### Collection & Distribution
 
-We collected exactly **200 public comments** manually from episode discussion threads and season trailer breakdown posts on `r/HouseOfTheDragon`. Manual scraping ensured posts met a minimum character threshold (filtering out single-word replies like "lmao").
+We curated exactly **200 public comments** by manually copy-pasting text directly from live episode discussion threads and season trailer breakdown posts on `r/HouseOfTheDragon`. Manual extraction allowed us to filter out one-word throwaway replies ("lmao", "based") while capturing authentic human structural variance (**Length Min: 30 chars | Max: 269 chars | Mean: 148.8 chars**).
 
-The dataset achieved an exceptionally stable **1/3 class balance**, completely avoiding majority-class collapse:
+The dataset achieved a highly stable **1/3 class balance**, completely avoiding majority-class collapse:
 
 - `lore_analysis`: **68 examples** (34%)
 - `faction_cheerleading`: **68 examples** (34%)
@@ -54,7 +54,7 @@ The dataset achieved an exceptionally stable **1/3 class balance**, completely a
 
 ### Difficult Edge Cases & Annotator Decisions
 
-The most challenging boundary was **"Weaponized Lore,"** where users cited dry, highly accurate in-universe historical facts to deliver an unhinged partisan insult.
+The most challenging boundary was **"Weaponized Lore,"** where users cited dry, accurate in-universe historical facts to deliver a bad-faith partisan insult.
 
 1. **Case A (Row 100):** _"By Westerosi law, a wife who commits high treason forfeits her children's right of inheritance, meaning Rhaenyra legally disinherited her own sons the moment she crowned herself."_
    - **Decision:** `faction_cheerleading`. Though framed around dry feudal inheritance theory, the concluding intent is a bad-faith bludgeon to invalidate a rival fanbase's protagonist.
@@ -72,7 +72,7 @@ We fine-tuned **`distilbert-base-uncased`** (a 66-million parameter distilled tr
 ### Key Hyperparameter Decision
 
 - **Learning Rate:** `2e-5` | **Batch Size:** `16`
-- **Epochs (Locked at 3.0):** We intentionally constrained training to exactly 3 epochs. Because our fine-tuning corpus was small (140 training rows), allowing the optimizer to run for 5+ epochs caused rapid memorization of specific character names (overfitting), which severely degraded validation loss.
+- **Epochs (Locked at 3.0):** We intentionally constrained training to exactly 3 epochs. Because our fine-tuning corpus was small (140 training rows of informal internet text), allowing the optimizer to run for 5+ epochs caused rapid memorization of specific user vernacular (overfitting), which severely degraded validation loss.
 
 ---
 
@@ -121,7 +121,7 @@ The prompt injected our complete label definitions and explicitly instructed the
 Analyzing the confusion matrix reveals a severe, directional heuristic failure. DistilBERT achieved a perfect 100% recall on `faction_cheerleading` (10/10) but collapsed on `lore_analysis` (catching only 2/11), misclassifying 63.6% of genuine lore posts as faction cheerleading.
 
 1. **The Lexical Violence Blindspot (True: `lore_analysis` -> Pred: `faction_cheerleading`)**
-   - _Text:_ "The final chomp at Storm's End was so vicious. Arrax spitting fire on Vhagar is like a puppy biting a tiger's tail."
+   - _Text:_ "The final chomp at Storm's End was so fucking vicious. Arrax spitting fire on Vhagar is like a puppy biting a tiger's tail."
    - _Analysis:_ In _House of the Dragon_, objective textual lore revolves around feudal warfare and dragon attacks. DistilBERT overfitted to aggressive vocabulary ("chomp", "vicious", "biting", "spitting fire"). While a human perceives this as a neutral cinematic observation of a dragon battle, the 66M transformer interpreted violent terminology as proof of inter-user hostility.
 2. **The "Over-Correction" Trap (True: `lore_analysis` -> Pred: `faction_cheerleading`)**
    - _Text:_ "Viserys words from season 1 come back again. You had 3 dragons on the same team fighting each other."
@@ -137,9 +137,9 @@ Analyzing the confusion matrix reveals a severe, directional heuristic failure. 
 | Comment Text                                                                         |      Actual Label      |    Predicted Label     |  Conf.   | Reasonability Assessment                                                                                                  |
 | :----------------------------------------------------------------------------------- | :--------------------: | :--------------------: | :------: | :------------------------------------------------------------------------------------------------------------------------ |
 | _"Viserys refusing to treat the rot in his arm is a direct metaphor for his court."_ |    `lore_analysis`     |    `lore_analysis`     | **0.92** | **Correct.** Perfectly identified the academic syntax ("metaphor for") and exploratory framing.                           |
-| _"WHAT THE FUCK? JACE?!? Such a stressful episode holy fuck."_                       |  `visceral_reaction`   |  `visceral_reaction`   | **0.96** | **Correct.** Captured the high-entropy capitalization and profanity strings.                                              |
+| _"WHAT THE FUCK JACE??? holy fuck"_                                                  |  `visceral_reaction`   |  `visceral_reaction`   | **0.96** | **Correct.** Captured the high-entropy capitalization and profanity strings.                                              |
 | _"Aemond carried this family on his back while Aegon was crying."_                   | `faction_cheerleading` | `faction_cheerleading` | **0.84** | **Correct.** Successfully recognized modern sports-talk slang ("carried on his back") applied to feudal politics.         |
-| _"The final chomp at Storm's End was so vicious."_                                   |    `lore_analysis`     | `faction_cheerleading` | **0.81** | **Incorrect.** Duped by the violent lexical triggers ("chomp", "vicious"), failing to weigh the neutral narrative intent. |
+| _"The final chomp at Storm's End was so fucking vicious."_                           |    `lore_analysis`     | `faction_cheerleading` | **0.81** | **Incorrect.** Duped by the violent lexical triggers ("chomp", "vicious"), failing to weigh the neutral narrative intent. |
 
 ---
 
@@ -156,8 +156,8 @@ Because it could not separate in-universe Targaryen violence from out-of-univers
 
 ## 8. Spec Reflection
 
-- **How the Spec guided us:** Defining the "Weaponized Lore" tie-breaker in `planning.md` saved our annotation pipeline. Without writing that explicit rule down beforehand, our human labeling across the 200 rows would have suffered from massive drift, polluting the ground truth.
-- **How implementation diverged:** In our spec, we established a success target of beating the baseline by +10%. In reality, we regressed by 20.0%. Rather than altering the spec post-hoc or scraping 1,000 more rows to force a win, we maintained the integrity of the locked 30-row test set to observe genuine failure modes.
+- **How the Spec guided us:** Defining the "Weaponized Lore" tie-breaker in `planning.md` saved our manual extraction pipeline. Without writing that explicit rule down beforehand, our human triage across the discussion threads would have suffered from massive drift, polluting the ground truth.
+- **How implementation diverged:** In our spec, we established a success target of beating the baseline by +10%. In reality, we regressed by 20.0%. Rather than altering the spec post-hoc or sanitizing the dataset to force a win, we maintained the integrity of the locked 30-row test set to observe genuine failure modes.
 
 ---
 
@@ -165,8 +165,8 @@ Because it could not separate in-universe Targaryen violence from out-of-univers
 
 1. **Taxonomy Stress-Testing (Planning Phase):** \* _Directive:_ Prompted Groq Llama-3 to generate 5 ambiguous comments sitting on the boundary of lore and cheerleading to test our human definitions.
    - _Output:_ Produced statements combining dry book genealogy with toxic insults.
-   - _Human Override:_ Forced us to rewrite Section 3 of `planning.md` to establish the "Ultimate Concluding Intent" rule.
-2. **Annotation Draft Assistance (Spreadsheet Phase):** \* _Directive:_ Passed 100 raw scraped Reddit comments to Claude asking it to draft Column B labels based strictly on our Markdown definitions.
-   - _Human Override:_ Human annotator manually audited all 100 rows. We manually overrode 14 rows where Claude flagged sarcastic Team Green praise as `lore_analysis`.
+   - _Human Override:_ Forced us to rewrite Section 3 of `planning.md` to establish the "Ultimate Concluding Intent" tie-breaker rule.
+2. **Annotation Draft Assistance (Spreadsheet Phase):** \* _Directive:_ Passed a batch of 100 manually copy-pasted raw comments from episode discussion threads to Claude asking it to draft Column B labels based strictly on our Markdown definitions.
+   - _Human Override:_ Human researcher manually audited 100% of the rows, executing manual overrides on 14 comments where Claude misclassified sarcastic faction worship as `lore_analysis`.
 3. **Error Pattern Synthesis (Autopsy Phase):** \* _Directive:_ Fed the text of DistilBERT's false predictions into ChatGPT asking: _"Analyze the syntactic structures of these failures."_
    - _Output:_ Identified the strong correlation between violent Targaryen vocabulary and false `faction_cheerleading` triggers, which directly formed the basis of our Failure Mode Analysis.
