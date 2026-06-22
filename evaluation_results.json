@@ -1,0 +1,12 @@
+{
+  "baseline_accuracy": 0.8667,
+  "finetuned_accuracy": 0.6667,
+  "improvement": -0.2,
+  "test_set_size": 30,
+  "label_map": {
+    "lore_analysis": 0,
+    "faction_cheerleading": 1,
+    "visceral_reaction": 2
+  },
+  "model": "distilbert-base-uncased"
+}
